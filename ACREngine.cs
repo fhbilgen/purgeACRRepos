@@ -4,6 +4,7 @@ using Azure;
 using Azure.Containers.ContainerRegistry;
 using Azure.Identity;
 using Microsoft.Identity.Client;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace purgeACRRepos
 {
@@ -19,6 +20,11 @@ namespace purgeACRRepos
             {
                 _repos.Add(client.GetRepository(repo));
             }
+        }
+
+        public ContainerRepository GetRepo(string repoName)
+        {
+            return _repos.Where(r => r.Name == repoName).FirstOrDefault();
         }
 
         public async Task GetManifestCollections(ContainerRegistryClient client)
@@ -137,6 +143,22 @@ namespace purgeACRRepos
 
             Console.WriteLine($"DisplayTheImagesOfTheLastNDays for the repo {repoName} for the {dayCount} days");
             DisplayTheManifestLists(remainings, goingtobepurged);
+        }
+
+
+
+        public async Task DeleteManifestAsync(ContainerRepository repo, ArtifactManifestProperties manifest )
+        {
+            RegistryArtifact artifact = repo.GetArtifact(manifest.Digest);
+            Console.WriteLine($"Deleting image with digest {manifest.Digest}.");
+            Console.WriteLine($"   Deleting the following tags from the image: ");
+            foreach (var tagName in manifest.Tags)
+            {
+                Console.WriteLine($"        {manifest.RepositoryName}:{tagName}");
+                await artifact.DeleteTagAsync(tagName);
+            }
+            
+            await artifact.DeleteAsync();
         }
 
         public void DisplayTheLastNImages(string repoName, int imageCount)
