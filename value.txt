@@ -1,0 +1,15 @@
+value
+prk8Q~V-DR3I.DehbKGo0ENi4jgEOoUAj8ohaa-X
+secret ID
+16b3c013-d300-468d-ac64-7eda0820b6d3
+
+AppID: b5730ee0-d8c6-4fad-8b2a-f8d8403e9e77
+TenantID: 16b3c013-d300-468d-ac64-7eda0820b6d3
+ClientSecret: prk8Q~V-DR3I.DehbKGo0ENi4jgEOoUAj8ohaa-X
+
+Severity	Code	Description	Project	File	Line	Suppression State
+Error	CS5001	Program does not contain a static 'Main' method suitable for an entry point	purgeACRRepos	D:\work\Azure\ACR\purgeACRRepos\CSC	1	Active
+
+
+Severity	Code	Description	Project	File	Line	Suppression State
+Error	CS1061	'AsyncPageable<string>' does not contain a definition for 'GetAwaiter' and no accessible extension method 'GetAwaiter' accepting a first argument of type 'AsyncPageable<string>' could be found (are you missing a using directive or an assembly reference?)	purgeACRRepos	D:\work\Azure\ACR\purgeACRRepos\azACRAuth.cs	63	Active
