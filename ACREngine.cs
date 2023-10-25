@@ -10,27 +10,39 @@ namespace purgeACRRepos
 {
     public class ACREngine
     {
-        private List<ContainerRepository> _repos = new List<ContainerRepository>();
-        private Dictionary<string, List<ArtifactManifestProperties>> _acr = new Dictionary<string, List<ArtifactManifestProperties>>();
-        public async Task GetRepos(ContainerRegistryClient client)
+        
+        private List<ContainerRepository> Repos { get; set; }
+        private Dictionary<string, List<ArtifactManifestProperties>> Acr { get; set; }
+        private ContainerRegistryClient Client { get; set; }
+        
+        
+        
+        public ACREngine(ContainerRegistryClient client)
+        {            
+            Client = client;
+            Repos = new List<ContainerRepository>();
+            Acr = new Dictionary<string, List<ArtifactManifestProperties>>();
+        }
+
+        public async Task GetRepos()
         {
-            _repos.Clear();
-            AsyncPageable<string> repositories = client.GetRepositoryNamesAsync();
+            Repos.Clear();
+            AsyncPageable<string> repositories = Client.GetRepositoryNamesAsync();
             await foreach (var repo in repositories)
             {
-                _repos.Add(client.GetRepository(repo));
+                Repos.Add(Client.GetRepository(repo));
             }
         }
 
         public ContainerRepository GetRepo(string repoName)
         {
-            return _repos.Where(r => r.Name == repoName).FirstOrDefault();
+            return Repos.Where(r => r.Name == repoName).FirstOrDefault();
         }
 
-        public async Task GetManifestCollections(ContainerRegistryClient client)
+        public async Task GetManifestCollections()
         {
-            _acr.Clear();
-            foreach (var repo in _repos)
+            Acr.Clear();
+            foreach (var repo in Repos)
             {               
                 AsyncPageable<ArtifactManifestProperties> imageManifests =
                    repo.GetAllManifestPropertiesAsync( ArtifactManifestOrder.LastUpdatedOnDescending);
@@ -40,15 +52,21 @@ namespace purgeACRRepos
                 await foreach (var manifest in imageManifests)
                     manifests.Add(manifest);
                 
-                _acr.Add(repo.Name, manifests);
+                Acr.Add(repo.Name, manifests);
             }
+        }
+
+        public async Task InitACREngineAsync()
+        {            
+            await GetRepos();
+            await GetManifestCollections();
         }
 
         public void DisplayRepos()
         {
             int i = 1;
            
-            foreach (var repo in _repos)
+            foreach (var repo in Repos)
                 Console.WriteLine($"{i++}. Repo Name: {repo.Name} EndPoint: {repo.RegistryEndpoint} ");
         }
 
@@ -56,7 +74,7 @@ namespace purgeACRRepos
         {
             int i = 1;
 
-            foreach (var repo in _repos)
+            foreach (var repo in Repos)
             {
                 Console.WriteLine($"{i++}. Repo Name: {repo.Name}");
                 DisplayManifests(repo.Name);
@@ -67,7 +85,7 @@ namespace purgeACRRepos
         {
             int i = 1;
             
-            foreach (var manifest in _acr[repoName])
+            foreach (var manifest in Acr[repoName])
             {
                 Console.Write($"{i++}. ");
                 DisplayManifest(manifest);
@@ -95,7 +113,7 @@ namespace purgeACRRepos
 
         public void DisplayDistinctDatesForEachRepo()
         {
-            foreach (var repo in _repos)
+            foreach (var repo in Repos)
             {
                 Console.WriteLine($"Repo Name: {repo.Name}");
                 DisplayTheLatestImageOfEachDay(repo.Name);
@@ -107,7 +125,7 @@ namespace purgeACRRepos
             List <ArtifactManifestProperties> remainings = new List<ArtifactManifestProperties>();
             List < ArtifactManifestProperties > goingtobepurged = new List<ArtifactManifestProperties>();
 
-            foreach (var manifest in _acr[repoName])
+            foreach (var manifest in Acr[repoName])
                 if (DateTime.Compare(manifest.LastUpdatedOn.Date, dt.Date) == 0)
                     goingtobepurged.Add(manifest);
                 else
@@ -127,7 +145,7 @@ namespace purgeACRRepos
             List<ArtifactManifestProperties> remainings = new List<ArtifactManifestProperties>();
             List<ArtifactManifestProperties> goingtobepurged = new List<ArtifactManifestProperties>();
 
-            foreach (var manifest in _acr[repoName])
+            foreach (var manifest in Acr[repoName])
             {
                 if (DateTime.Compare(manifest.LastUpdatedOn.Date, dt.Date) != 0)
                 {
@@ -145,29 +163,14 @@ namespace purgeACRRepos
             DisplayTheManifestLists(remainings, goingtobepurged);
         }
 
-
-
-        public async Task DeleteManifestAsync(ContainerRepository repo, ArtifactManifestProperties manifest )
-        {
-            RegistryArtifact artifact = repo.GetArtifact(manifest.Digest);
-            Console.WriteLine($"Deleting image with digest {manifest.Digest}.");
-            Console.WriteLine($"   Deleting the following tags from the image: ");
-            foreach (var tagName in manifest.Tags)
-            {
-                Console.WriteLine($"        {manifest.RepositoryName}:{tagName}");
-                await artifact.DeleteTagAsync(tagName);
-            }
-            
-            await artifact.DeleteAsync();
-        }
-
+       
         public void DisplayTheLastNImages(string repoName, int imageCount)
         {
             int count = 0;            
             List<ArtifactManifestProperties> remainings = new List<ArtifactManifestProperties>();
             List<ArtifactManifestProperties> goingtobepurged = new List<ArtifactManifestProperties>();
 
-            foreach (var manifest in _acr[repoName])
+            foreach (var manifest in Acr[repoName])
             {               
                 if (++count <= imageCount)
                     remainings.Add(manifest);
@@ -187,5 +190,89 @@ namespace purgeACRRepos
             DisplayManifests(goingtobepurged);
         }
 
+
+        public async Task DeleteAllButTheLatestImageOfEachDay(string repoName)
+        {
+            DateTime dt = DateTime.Today;
+            List<ArtifactManifestProperties> remainings = new List<ArtifactManifestProperties>();
+            List<ArtifactManifestProperties> goingtobepurged = new List<ArtifactManifestProperties>();
+
+            foreach (var manifest in Acr[repoName])
+                if (DateTime.Compare(manifest.LastUpdatedOn.Date, dt.Date) == 0)
+                    goingtobepurged.Add(manifest);
+                else
+                {
+                    dt = manifest.LastUpdatedOn.Date;
+                    remainings.Add(manifest);
+                }                     
+
+            await DeleteManifestsAsync(repoName, goingtobepurged);
+        }
+
+        public async Task DeleteTheImagesExceptTheLastNDays(string repoName, int dayCount)
+        {
+            int count = 0;
+            DateTime dt = DateTime.Today;
+            List<ArtifactManifestProperties> remainings = new List<ArtifactManifestProperties>();
+            List<ArtifactManifestProperties> goingtobepurged = new List<ArtifactManifestProperties>();
+
+            foreach (var manifest in Acr[repoName])
+            {
+                if (DateTime.Compare(manifest.LastUpdatedOn.Date, dt.Date) != 0)
+                {
+                    dt = manifest.LastUpdatedOn.Date;
+                    count++;
+                }
+
+                if (count <= dayCount)
+                    remainings.Add(manifest);
+                else
+                    goingtobepurged.Add(manifest);
+            }
+            
+            await DeleteManifestsAsync(repoName, goingtobepurged);
+        }
+
+        public async Task DeleteAllButTheLastNImages(string repoName, int imageCount)
+        {
+            int count = 0;
+            List<ArtifactManifestProperties> remainings = new List<ArtifactManifestProperties>();
+            List<ArtifactManifestProperties> goingtobepurged = new List<ArtifactManifestProperties>();
+
+            foreach (var manifest in Acr[repoName])
+            {
+                if (++count <= imageCount)
+                    remainings.Add(manifest);
+                else
+                    goingtobepurged.Add(manifest);
+            }
+
+            await DeleteManifestsAsync(repoName, goingtobepurged);
+        }
+
+        private async Task DeleteManifestsAsync(string repoName, List<ArtifactManifestProperties> manifests)
+        {
+            ContainerRepository repo = GetRepo(repoName);
+            foreach (var manifest in manifests)
+                await DeleteManifestAsync(repo, manifest);
+
+            await GetManifestCollections();
+        }
+
+
+        public async Task DeleteManifestAsync(ContainerRepository repo, ArtifactManifestProperties manifest)
+        {
+            RegistryArtifact artifact = repo.GetArtifact(manifest.Digest);
+            Console.WriteLine($"Deleting image with digest {manifest.Digest}.");
+            Console.WriteLine($"   Deleting the following tags from the image: ");
+            foreach (var tagName in manifest.Tags)
+            {
+                Console.WriteLine($"        {manifest.RepositoryName}:{tagName}");
+                await artifact.DeleteTagAsync(tagName);
+            }
+            await artifact.DeleteAsync();            
+        }
+
     }
 }
+
