@@ -121,7 +121,7 @@ namespace purgeACRRepos
         }
         public void DisplayTheLatestImageOfEachDay(string repoName)
         {
-            DateTime dt = DateTime.Today;
+            DateTime dt = DateTime.Today.AddDays(1);
             List <ArtifactManifestProperties> remainings = new List<ArtifactManifestProperties>();
             List < ArtifactManifestProperties > goingtobepurged = new List<ArtifactManifestProperties>();
 
@@ -141,7 +141,7 @@ namespace purgeACRRepos
         public void DisplayTheImagesOfTheLastNDays(string repoName, int dayCount)
         {
             int count = 0;
-            DateTime dt = DateTime.Today;
+            DateTime dt = DateTime.Today.AddDays(1);
             List<ArtifactManifestProperties> remainings = new List<ArtifactManifestProperties>();
             List<ArtifactManifestProperties> goingtobepurged = new List<ArtifactManifestProperties>();
 
@@ -193,7 +193,7 @@ namespace purgeACRRepos
 
         public async Task DeleteAllButTheLatestImageOfEachDay(string repoName)
         {
-            DateTime dt = DateTime.Today;
+            DateTime dt = DateTime.Today.AddDays(1);
             List<ArtifactManifestProperties> remainings = new List<ArtifactManifestProperties>();
             List<ArtifactManifestProperties> goingtobepurged = new List<ArtifactManifestProperties>();
 
@@ -212,7 +212,7 @@ namespace purgeACRRepos
         public async Task DeleteTheImagesExceptTheLastNDays(string repoName, int dayCount)
         {
             int count = 0;
-            DateTime dt = DateTime.Today;
+            DateTime dt = DateTime.Today.AddDays(1);
             List<ArtifactManifestProperties> remainings = new List<ArtifactManifestProperties>();
             List<ArtifactManifestProperties> goingtobepurged = new List<ArtifactManifestProperties>();
 
