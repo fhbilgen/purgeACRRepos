@@ -15,11 +15,7 @@ namespace purgeACRRepos
         public IConfiguration Config { get; set; }
 
         public ACRAuth(IConfiguration config)
-        {
-            //Environment.SetEnvironmentVariable(_envVars[0], "b5730ee0-d8c6-4fad-8b2a-f8d8403e9e77");
-            //Environment.SetEnvironmentVariable(_envVars[1], "16b3c013-d300-468d-ac64-7eda0820b6d3");
-            //Environment.SetEnvironmentVariable(_envVars[2], "prk8Q~V-DR3I.DehbKGo0ENi4jgEOoUAj8ohaa-X");
-            
+        {            
             Config = config;
 
             azCred = GetAzCredentials(0);
