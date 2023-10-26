@@ -67,7 +67,7 @@ namespace purgeACRRepos
             int i = 1;
            
             foreach (var repo in Repos)
-                Console.WriteLine($"{i++}. Repo Name: {repo.Name} EndPoint: {repo.RegistryEndpoint} ");
+                Console.WriteLine($"{i++}. Repo Name: {repo.Name} Manifest Count: {Acr[repo.Name].Count} EndPoint: {repo.RegistryEndpoint} ");
         }
 
         public void DisplayManifestsForEveryRepo()
